@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Black and White Manhattan Happy Hour Activity</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Inter:wght@400;500;600&display=swap');
+
+:root{
+  --bg:#ffffff;
+  --paper:#ffffff;
+  --ink:#000000;
+  --muted:#4f4f4f;
+  --line:#cfcfcf;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:Inter,Arial,sans-serif;
+}
+#wrap{
+  width:min(100%, 760px);
+  margin:auto;
+  padding:10px;
+}
+.card{
+  background:var(--paper);
+  border:1px solid #000;
+  padding:10px;
+}
+.kicker{
+  font:600 10px/1 Inter, Arial, sans-serif;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  color:#333;
+  margin-bottom:6px;
+}
+h1{
+  font:700 20px/1.08 'Libre Baskerville', Georgia, serif;
+  margin:0 0 6px;
+}
+#subhead{
+  margin:0 0 10px;
+  font-size:11px;
+  line-height:1.35;
+  color:#333;
+}
+#day-tabs{
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+  margin:0 0 10px;
+}
+.day-tab{
+  border:1px solid #000;
+  background:#fff;
+  color:#000;
+  border-radius:14px;
+  padding:5px 8px;
+  font:600 10px/1 Inter, Arial, sans-serif;
+  cursor:pointer;
+}
+.day-tab.on{
+  background:#000;
+  color:#fff;
+}
+#layout{
+  display:grid;
+  grid-template-columns:1fr 230px;
+  gap:10px;
+  align-items:start;
+}
+#map{
+  height:420px;
+  border:1px solid #000;
+}
+.leaflet-control-zoom{display:none !important}
+.leaflet-container{
+  background:#fff;
+  font-family:Inter,Arial,sans-serif;
+}
+.leaflet-control-attribution{
+  font-size:9px;
+  background:rgba(255,255,255,.85);
+}
+.label{
+  background:rgba(255,255,255,0.18);
+  border:1px solid rgba(0,0,0,0.20);
+  color:#111;
+  padding:2px 5px;
+  font-size:9px;
+}
+.leaflet-tooltip-left.label:before,
+.leaflet-tooltip-right.label:before{
+  display:none;
+}
+#sidebar-title{
+  font:700 13px/1.15 'Libre Baskerville', Georgia, serif;
+  margin:0 0 4px;
+}
+#time-readout{
+  font:700 16px/1 'Libre Baskerville', Georgia, serif;
+  margin:5px 0 8px;
+}
+#bars{
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+}
+.bar-row{
+  display:grid;
+  grid-template-columns:14px 1fr 34px;
+  gap:7px;
+  align-items:center;
+}
+.rank{
+  font:700 11px/1 'Libre Baskerville', Georgia, serif;
+  color:#555;
+  text-align:right;
+}
+.name{
+  font-size:10px;
+  line-height:1.1;
+}
+.bar-wrap{
+  display:grid;
+  grid-template-columns:1fr 32px;
+  gap:6px;
+  align-items:center;
+  grid-column:2 / 4;
+}
+.bar-bg{
+  height:7px;
+  background:#d8d8d8;
+}
+.bar-fill{
+  height:100%;
+  background:#000;
+}
+.bar-val{
+  font-size:10px;
+  font-weight:600;
+  text-align:right;
+}
+#slider-wrap{
+  margin-top:10px;
+  padding-top:8px;
+  border-top:1px solid var(--line);
+}
+#slider-top{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  align-items:flex-end;
+  flex-wrap:wrap;
+  margin-bottom:6px;
+}
+#slider-label{
+  font:700 18px/1 'Libre Baskerville', Georgia, serif;
+}
+#desc{
+  color:var(--muted);
+  font-size:10px;
+  max-width:420px;
+  line-height:1.3;
+}
+#slider{
+  width:100%;
+  accent-color:#000;
+}
+#ticks{
+  display:flex;
+  justify-content:space-between;
+  font-size:9px;
+  color:#555;
+  margin-top:3px;
+}
+#legend{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-wrap:wrap;
+  margin-top:8px;
+  font-size:10px;
+  color:#333;
+}
+#grad{
+  width:120px;
+  height:9px;
+  border:1px solid rgba(0,0,0,0.16);
+  background:linear-gradient(to right,#f4f4f4,#000000);
+}
+#loading{
+  margin-top:8px;
+  font-size:10px;
+  color:#666;
+}
+#notes{
+  margin-top:7px;
+  font-size:9px;
+  line-height:1.3;
+  color:#555;
+}
+@media (max-width: 700px){
+  #wrap{width:min(100%, 420px); padding:8px;}
+  h1{font-size:18px}
+  #layout{grid-template-columns:1fr;}
+  #map{height:330px;}
+}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div class="card">
+    <div class="kicker">Black and white view</div>
+    <h1>Happy hour activity in Manhattan</h1>
+    <p id="subhead">
+  <strong>Neighborhood heatmap of happy hour activity across Manhattan</strong><br>
+  <em>Modeled from aggregated venue data on start times and neighborhood-level activity.</em>
+</p>
+
+    <div id="day-tabs">
+      <button class="day-tab" data-day="Mon">Mon</button>
+      <button class="day-tab" data-day="Tue">Tue</button>
+      <button class="day-tab" data-day="Wed">Wed</button>
+      <button class="day-tab" data-day="Thu">Thu</button>
+      <button class="day-tab on" data-day="Fri">Fri</button>
+      <button class="day-tab" data-day="Sat">Sat</button>
+      <button class="day-tab" data-day="Sun">Sun</button>
+    </div>
+
+    <div id="layout">
+      <div>
+        <div id="map"></div>
+      </div>
+
+      <div>
+        <h2 id="sidebar-title">Neighborhood ranking</h2>
+        <div id="time-readout">Fri · 3:00 p.m.</div>
+        <div id="bars"></div>
+      </div>
+    </div>
+
+    <div id="slider-wrap">
+      <div id="slider-top">
+        <div id="slider-label">Fri · 3:00 p.m.</div>
+        <div id="desc">Darker neighborhoods indicate stronger estimated happy hour activity at the selected day and time.</div>
+      </div>
+      <input id="slider" type="range" min="12" max="20" step="0.25" value="15"/>
+      <div id="ticks">
+        <span>12 p.m.</span>
+        <span>1</span>
+        <span>2</span>
+        <span>3</span>
+        <span>4</span>
+        <span>5</span>
+        <span>6</span>
+        <span>7</span>
+        <span>8 p.m.</span>
+      </div>
+
+      <div id="legend">
+        <span>Less</span>
+        <div id="grad"></div>
+        <span>More</span>
+      </div>
+
+      <div id="loading">Loading neighborhood boundary shapes...</div>
+      <div id="notes">Modeled from neighborhood happy hour start times and relative busyness. Day effects shift both overall volume and timing of peak activity.</div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+const DATA = [
+  {name:"Midtown", hh:14.9, val:81},
+  {name:"East Village", hh:13.5, val:62},
+  {name:"Lower East Side", hh:15.0, val:58},
+  {name:"West Village", hh:15.8, val:67},
+  {name:"Financial District", hh:15.7, val:71},
+  {name:"Upper East Side", hh:15.7, val:68},
+  {name:"Chelsea", hh:16.5, val:64},
+  {name:"Flatiron", hh:16.2, val:72},
+  {name:"Upper West Side", hh:16.2, val:65},
+  {name:"Harlem", hh:16.3, val:59}
+];
+
+const ALIASES = {
+  "Midtown": ["Midtown", "Midtown East", "Midtown West", "Midtown South", "Theater District", "Garment District", "Hell's Kitchen"],
+  "East Village": ["East Village", "Alphabet City"],
+  "Lower East Side": ["Lower East Side", "Two Bridges"],
+  "West Village": ["West Village", "Greenwich Village", "Meatpacking District"],
+  "Financial District": ["Financial District", "Battery Park City", "Civic Center", "Wall Street"],
+  "Upper East Side": ["Upper East Side", "Yorkville", "Lenox Hill", "Carnegie Hill"],
+  "Chelsea": ["Chelsea", "Hudson Yards"],
+  "Flatiron": ["Flatiron", "Flatiron District", "Union Square", "Gramercy", "NoMad"],
+  "Upper West Side": ["Upper West Side", "Lincoln Square"],
+  "Harlem": ["Harlem", "Central Harlem", "South Harlem", "Hamilton Heights", "Morningside Heights", "Manhattanville"]
+};
+
+const DAY_EFFECTS = {
+  "Mon": {mult:0.74, shift:-0.35, sigma:1.00},
+  "Tue": {mult:0.82, shift:-0.20, sigma:1.00},
+  "Wed": {mult:0.92, shift:-0.05, sigma:1.02},
+  "Thu": {mult:1.08, shift:0.18, sigma:1.08},
+  "Fri": {mult:1.24, shift:0.38, sigma:1.12},
+  "Sat": {mult:1.14, shift:0.68, sigma:1.18},
+  "Sun": {mult:0.62, shift:-0.12, sigma:0.96}
+};
+
+let currentDay = "Fri";
+const layers = {};
+const barsEl = document.getElementById('bars');
+const slider = document.getElementById('slider');
+
+function matchFeature(feature, aliases){
+  const text = JSON.stringify(feature.properties).toLowerCase();
+  return aliases.some(a => text.includes(a.toLowerCase()));
+}
+function toAmpm(hour){
+  const h = Math.floor(hour);
+  const m = Math.round((hour - h) * 60);
+  const suffix = h >= 12 ? 'p.m.' : 'a.m.';
+  const h12 = h > 12 ? h - 12 : h;
+  return `${h12}:${String(m).padStart(2,'0')} ${suffix}`;
+}
+function intensity(d, t, day){
+  const effect = DAY_EFFECTS[day];
+  const sigma = 1.1 * effect.sigma;
+  const shiftedCenter = d.hh + effect.shift;
+  const x = (t - shiftedCenter) / sigma;
+  return d.val * effect.mult * Math.exp(-0.5 * x * x);
+}
+function grayscale(value, max){
+  const t = Math.max(0, Math.min(1, value / max));
+  const shade = Math.round(245 - (t * 230));
+  return `rgb(${shade},${shade},${shade})`;
+}
+
+const map = L.map('map', {
+  zoomControl:false,
+  dragging:false,
+  scrollWheelZoom:false,
+  doubleClickZoom:false,
+  boxZoom:false,
+  keyboard:false,
+  touchZoom:false,
+  tap:false
+});
+
+const bounds = L.latLngBounds([
+  [40.702, -74.018],
+  [40.834, -73.934]
+]);
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+  maxZoom:20,
+  subdomains:'abcd',
+  attribution:'&copy; OpenStreetMap contributors &copy; CARTO'
+}).addTo(map);
+
+map.fitBounds(bounds, {padding:[-20,-20]});
+map.setMaxBounds(bounds.pad(0));
+
+function addLabel(layer, name){
+  const center = layer.getBounds().getCenter();
+  const offsets = {
+    "Upper West Side":[0.010,-0.055],
+    "Harlem":[0.014,-0.055],
+    "Upper East Side":[0.000,0.056],
+    "Midtown":[-0.004,0.060],
+    "Chelsea":[-0.003,-0.060],
+    "Flatiron":[-0.005,0.061],
+    "West Village":[-0.008,-0.062],
+    "East Village":[-0.003,0.063],
+    "Lower East Side":[-0.001,0.065],
+    "Financial District":[-0.008,0.060]
+  };
+  const off = offsets[name] || [0, 0.055];
+  const latlng = [center.lat + off[0], center.lng + off[1]];
+  L.tooltip({permanent:true, className:'label', direction:'center'})
+    .setLatLng(latlng)
+    .setContent(name)
+    .addTo(map);
+}
+
+function renderBars(sorted, maxVal){
+  barsEl.innerHTML = '';
+  sorted.forEach((d, i) => {
+    const pct = maxVal > 0 ? (d.current / maxVal) * 100 : 0;
+    const row = document.createElement('div');
+    row.className = 'bar-row';
+    row.innerHTML = `
+      <div class="rank">${i+1}</div>
+      <div class="name">${d.name}</div>
+      <div></div>
+      <div class="bar-wrap">
+        <div class="bar-bg"><div class="bar-fill" style="width:${pct}%;"></div></div>
+        <div class="bar-val">${d.current.toFixed(0)}</div>
+      </div>
+    `;
+    barsEl.appendChild(row);
+  });
+}
+
+function updateDayButtons(){
+  document.querySelectorAll('.day-tab').forEach(btn=>{
+    btn.classList.toggle('on', btn.dataset.day === currentDay);
+  });
+}
+
+function update(){
+  const t = parseFloat(slider.value);
+  const label = `${currentDay} · ${toAmpm(t)}`;
+  document.getElementById('slider-label').textContent = label;
+  document.getElementById('time-readout').textContent = label;
+
+  const withCurrent = DATA.map(d => ({...d, current: intensity(d, t, currentDay)}));
+  const maxVal = Math.max(...withCurrent.map(d => d.current), 1);
+
+  withCurrent.forEach(d => {
+    const layer = layers[d.name];
+    if(!layer) return;
+    const rel = d.current / maxVal;
+    layer.setStyle({
+      fillColor: grayscale(d.current, maxVal),
+      fillOpacity: 0.88,
+      color: rel > 0.82 ? '#000000' : '#8a8a8a',
+      weight: rel > 0.82 ? 1.9 : 0.9
+    });
+  });
+
+  const sorted = withCurrent.slice().sort((a,b) => b.current - a.current);
+  renderBars(sorted, maxVal);
+}
+
+document.querySelectorAll('.day-tab').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    currentDay = btn.dataset.day;
+    updateDayButtons();
+    update();
+  });
+});
+
+fetch('https://raw.githubusercontent.com/veltman/snd3/master/data/nyc-neighborhoods.geo.json')
+  .then(r => r.json())
+  .then(g => {
+    DATA.forEach((d) => {
+      const feats = g.features.filter(f => matchFeature(f, ALIASES[d.name] || [d.name]));
+      if(!feats.length) return;
+
+      const layer = L.geoJSON({type:"FeatureCollection", features:feats}, {
+        style:{color:"#777", weight:0.9, fillColor:"#d9d9d9", fillOpacity:.8}
+      }).addTo(map);
+
+      layers[d.name] = layer;
+      addLabel(layer, d.name);
+    });
+
+    document.getElementById('loading').style.display = 'none';
+    updateDayButtons();
+    update();
+  })
+  .catch(() => {
+    document.getElementById('loading').textContent = 'Could not load neighborhood boundary shapes.';
+    updateDayButtons();
+    update();
+  });
+
+slider.addEventListener('input', update);
+</script>
+</body>
+</html>
